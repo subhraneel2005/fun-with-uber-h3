@@ -107,14 +107,21 @@ const server = Bun.serve({
     },
     websocket: {
         data: {} as WebSocketsData,
-        async message(ws, message) {
-            ws.send(`[${ws.data.userId}]: ${message}`)
-        },
         async open(ws) {
-            ws.send(`userId: ${ws.data?.userId} joined the channel`)
+            const msg = `${ws.data.userId} has joined the room`;
+
+            ws.subscribe(ws.data.channelId)
+            server.publish(ws.data.channelId, msg);
+            // ws.send(`[${ws.data.userId}]: ${message}`)
+        },
+        async message(ws, message) {
+            server.publish(ws.data.channelId, `[${ws.data.userId}]: ${message}`)
+            console.log(`active subscribers: ${server.subscriberCount(ws.data.channelId)}`)
         },
         async close(ws, code, reason) {
-            ws.send(reason)
+            const msg = `${ws.data.userId} has left the channel, due to ${reason}. Status code: ${code}`
+            ws.unsubscribe(ws.data.channelId)
+            server.publish(ws.data.channelId, msg)
         },
         async drain(ws) {
 
