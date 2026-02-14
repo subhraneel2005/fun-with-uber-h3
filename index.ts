@@ -77,7 +77,7 @@ interface Channel {
 
 }
 
-const server = Bun.serve<WebSocketsData>({
+const server = Bun.serve({
     port: process.env.PORT,
 
     fetch(req, server) {
@@ -94,27 +94,29 @@ const server = Bun.serve<WebSocketsData>({
                     createdAt: Date.now(),
                     username: "someRandomShit",
                     channelId: id!,
-                    userId: "someUUID"
+                    userId: crypto.randomUUID(),
                 }
             });
 
             if (success) return undefined;
-            return
+            return new Response("upgrade failed", { status: 500 })
         }
 
-        return new Response("upgrade failed", { status: 500 })
+        return new Response("server running")
+
     },
     websocket: {
-        message(ws, message) {
-            ws.send(message)
+        data: {} as WebSocketsData,
+        async message(ws, message) {
+            ws.send(`[${ws.data.userId}]: ${message}`)
         },
-        open(ws) {
-            console.log(ws.data.channelId)
+        async open(ws) {
+            ws.send(`userId: ${ws.data?.userId} joined the channel`)
         },
-        close(ws, code, reason) {
+        async close(ws, code, reason) {
             ws.send(reason)
         },
-        drain(ws) {
+        async drain(ws) {
 
         },
     }
